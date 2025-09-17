@@ -38,3 +38,18 @@ management:
         enabled: true
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
+
+jwt:
+  secret: ${JWT_SECRET:test12223ADSUYDASIJAS61526132-123123123gsaug}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  default-produces-media-type: application/json
+
+logging:
+  level:
+    com.crediya: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
