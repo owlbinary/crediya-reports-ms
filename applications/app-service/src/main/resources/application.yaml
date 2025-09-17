@@ -1,14 +1,40 @@
-##Spring Configuration
 server:
-  port: 8080
+  port: ${SERVER_PORT}
+
 spring:
   application:
-    name: reports-service
+    name: "reports-service"
   devtools:
     add-properties: false
-  h2:
-    console:
-      enabled: true
-      path: /h2
-  profiles:
-    include:
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+    time-zone: "UTC"
+
+aws:
+  region: ${AWS_REGION}
+  credentials:
+    accessKey: ${AWS_ACCESS_KEY_ID}
+    secretKey: ${AWS_SECRET_ACCESS_KEY}
+  dynamodb:
+    table-name: ${DYNAMODB_TABLE_NAME}
+  sqs:
+    estado-solicitud:
+      region: ${AWS_REGION}
+      queueUrl: ${AWS_SQS_ESTADO_SOLICITUD_QUEUE_URL}
+      waitTimeSeconds: 20
+      visibilityTimeoutSeconds: 30
+      maxNumberOfMessages: 10
+      numberOfThreads: 1
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+cors:
+  allowed-origins: "http://localhost:4200,http://localhost:8080"
