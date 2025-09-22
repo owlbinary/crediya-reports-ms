@@ -12,13 +12,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import reactor.core.publisher.Mono;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
 import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.metrics.MetricPublisher;
@@ -40,12 +38,6 @@ public class SQSConfig {
     private static final String APROBADO_STATUS = "APROBADO";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    @Value("${aws.credentials.accessKey}")
-    private String accessKey;
-
-    @Value("${aws.credentials.secretKey}")
-    private String secretKey;
 
     @Bean
     public Function<Message, Mono<Void>> messageProcessor(IncrementReportCounterUseCase incrementUseCase) {
@@ -193,23 +185,14 @@ public class SQSConfig {
     }
 
     private AwsCredentialsProviderChain getAwsCredentialsProvider() {
-        if (accessKey != null && !accessKey.isEmpty() && !"${aws.credentials.accessKey}".equals(accessKey)) {
-            log.info("Configurando credenciales local");
-            return AwsCredentialsProviderChain.builder()
-                    .addCredentialsProvider(StaticCredentialsProvider.create(
-                            AwsBasicCredentials.create(accessKey, secretKey)))
-                    .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
-                    .build();
-        } else {
-            log.info("Configurando credenciales AWS");
-            return AwsCredentialsProviderChain.builder()
-                    .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
-                    .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
-                    .addCredentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
-                    .addCredentialsProvider(ProfileCredentialsProvider.create())
-                    .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
-                    .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
-                    .build();
-        }
+        log.info("Configurando credenciales AWS");
+        return AwsCredentialsProviderChain.builder()
+                .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
+                .addCredentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                .addCredentialsProvider(ProfileCredentialsProvider.create())
+                .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
+                .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
+                .build();
     }
 }

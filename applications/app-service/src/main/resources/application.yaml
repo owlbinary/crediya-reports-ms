@@ -2,6 +2,8 @@ server:
   port: ${SERVER_PORT}
 
 spring:
+  webflux:
+    base-path: /reports
   application:
     name: "reports-service"
   devtools:
@@ -28,6 +30,8 @@ aws:
       maxNumberOfMessages: 10
       numberOfThreads: 1
 management:
+  server:
+    base-path: /actuator
   endpoints:
     web:
       exposure:

@@ -52,9 +52,13 @@ public class JwtAuthenticationFilter implements WebFilter {
      */
     private boolean isPublicPath(String path) {
         return path.startsWith("/actuator") ||
+               path.startsWith("/reports/actuator") ||
                path.startsWith("/swagger-ui") ||
+               path.startsWith("/reports/swagger-ui") ||
                path.startsWith("/v3/api-docs") ||
-               path.startsWith("/webjars");
+               path.startsWith("/reports/v3/api-docs") ||
+               path.startsWith("/webjars") ||
+               path.startsWith("/reports/webjars");
     }
 
     /**
