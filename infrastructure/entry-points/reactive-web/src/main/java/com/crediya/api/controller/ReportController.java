@@ -2,6 +2,7 @@ package com.crediya.api.controller;
 
 import com.crediya.api.dto.ReportResponseDto;
 import com.crediya.api.security.JwtUserPrincipal;
+import com.crediya.api.service.AutomaticReportService;
 import com.crediya.model.report.Report;
 import com.crediya.usecase.getreportcounter.GetReportCounterUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
@@ -35,6 +37,7 @@ import reactor.core.publisher.Mono;
 public class ReportController {
     
     private final GetReportCounterUseCase getReportCounterUseCase;
+    private final AutomaticReportService automaticReportService;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")

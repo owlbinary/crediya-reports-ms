@@ -36,9 +36,13 @@ public class ReportRepositoryAdapter implements ReportRepository {
         Key key = Key.builder().partitionValue(reportType).build();
         
         return Mono.fromFuture(table.getItem(key))
-                .map(this::entityToModel)
-                .doOnSuccess(report -> log.info("Reporte encontrado: " + report))
-                .doOnError(error -> log.severe("Error buscando reporte: " + error.getMessage()));
+                .map(entity -> entity != null ? entityToModel(entity) : null)
+                .switchIfEmpty(createDefaultReport(reportType))
+                .onErrorResume(error -> {
+                    log.severe("Error buscando reporte: " + error.getMessage());
+                    return createDefaultReport(reportType);
+                })
+                .doOnSuccess(report -> log.info("Reporte obtenido: " + report));
     }
 
     @Override

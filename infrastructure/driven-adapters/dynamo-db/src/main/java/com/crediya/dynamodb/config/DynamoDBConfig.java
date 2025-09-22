@@ -5,7 +5,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.metrics.MetricCollection;
@@ -47,9 +53,21 @@ public class DynamoDBConfig {
     @Profile({"dev", "stage", "prod"})
     public DynamoDbAsyncClient amazonDynamoDBAsync(MetricPublisher publisher, @Value("${aws.region}") String region) {
         return DynamoDbAsyncClient.builder()
-                .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                .credentialsProvider(getAwsCredentialsProviderChain())
                 .region(Region.of(region))
                 .overrideConfiguration(o -> o.addMetricPublisher(publisher))
+                .build();
+    }
+
+    private AwsCredentialsProviderChain getAwsCredentialsProviderChain() {
+        System.out.println("Configurando credenciales para DynamoDB");
+        return AwsCredentialsProviderChain.builder()
+                .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
+                .addCredentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                .addCredentialsProvider(ProfileCredentialsProvider.create())
+                .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
+                .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
                 .build();
     }
 

@@ -16,9 +16,6 @@ spring:
 
 aws:
   region: ${AWS_REGION}
-  credentials:
-    accessKey: ${AWS_ACCESS_KEY_ID}
-    secretKey: ${AWS_SECRET_ACCESS_KEY}
   dynamodb:
     table-name: ${DYNAMODB_TABLE_NAME}
   sqs:
@@ -29,6 +26,11 @@ aws:
       visibilityTimeoutSeconds: 30
       maxNumberOfMessages: 10
       numberOfThreads: 1
+
+adapter:
+  sqs:
+    region: ${AWS_REGION}
+    queueUrl: ${AWS_SQS_NOTIFICACIONES_QUEUE_URL}
 management:
   server:
     base-path: /actuator

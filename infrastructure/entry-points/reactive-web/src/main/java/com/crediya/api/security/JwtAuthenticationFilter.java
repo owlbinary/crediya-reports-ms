@@ -58,7 +58,9 @@ public class JwtAuthenticationFilter implements WebFilter {
                path.startsWith("/v3/api-docs") ||
                path.startsWith("/reports/v3/api-docs") ||
                path.startsWith("/webjars") ||
-               path.startsWith("/reports/webjars");
+               path.startsWith("/reports/webjars") ||
+               path.startsWith("/public") ||
+               path.startsWith("/reports/public");
     }
 
     /**
