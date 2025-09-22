@@ -67,7 +67,7 @@ class ReportRepositoryAdapterTest {
     }
 
     @Test
-    void shouldReturnNullWhenReportNotFound() {
+    void shouldReturnDefaultReportWhenReportNotFound() {
         String reportType = "NON_EXISTENT";
         Key expectedKey = Key.builder().partitionValue(reportType).build();
         
@@ -77,7 +77,12 @@ class ReportRepositoryAdapterTest {
         Mono<Report> result = repositoryAdapter.findByReportType(reportType);
 
         StepVerifier.create(result)
-                .expectNext()
+                .expectNextMatches(report -> 
+                    report.getId().equals(reportType) &&
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(0L) &&
+                    report.getTotalApprovedAmount().equals(BigDecimal.ZERO)
+                )
                 .verifyComplete();
 
         verify(dynamoTable).getItem(expectedKey);
@@ -95,8 +100,13 @@ class ReportRepositoryAdapterTest {
         Mono<Report> result = repositoryAdapter.findByReportType(reportType);
 
         StepVerifier.create(result)
-                .expectError(RuntimeException.class)
-                .verify();
+                .expectNextMatches(report -> 
+                    report.getId().equals(reportType) &&
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(0L) &&
+                    report.getTotalApprovedAmount().equals(BigDecimal.ZERO)
+                )
+                .verifyComplete();
     }
 
     @Test
@@ -235,7 +245,12 @@ class ReportRepositoryAdapterTest {
         Mono<Report> result = repositoryAdapter.findByReportType(reportType);
 
         StepVerifier.create(result)
-                .expectNextCount(0)
+                .expectNextMatches(report -> 
+                    report.getId().equals(reportType) &&
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(0L) &&
+                    report.getTotalApprovedAmount().equals(BigDecimal.ZERO)
+                )
                 .verifyComplete();
     }
 
@@ -271,6 +286,151 @@ class ReportRepositoryAdapterTest {
         entity.setTotalApprovedAmount(amount);
         entity.setLastUpdated(Instant.now());
         return entity;
+    }
+
+    @Test
+    void shouldHandleEntityWithNullLastUpdated() {
+        String reportType = "NULL_DATE_TEST";
+        ReportEntity entityWithNullDate = new ReportEntity();
+        entityWithNullDate.setId(reportType);
+        entityWithNullDate.setReportType(reportType);
+        entityWithNullDate.setApprovedLoansCount(3L);
+        entityWithNullDate.setTotalApprovedAmount(new BigDecimal("15000.00"));
+        entityWithNullDate.setLastUpdated(null);
+        
+        Key expectedKey = Key.builder().partitionValue(reportType).build();
+        
+        when(dynamoTable.getItem(expectedKey))
+                .thenReturn(CompletableFuture.completedFuture(entityWithNullDate));
+
+        Mono<Report> result = repositoryAdapter.findByReportType(reportType);
+
+        StepVerifier.create(result)
+                .expectNextMatches(report -> 
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(3L) &&
+                    report.getTotalApprovedAmount().equals(new BigDecimal("15000.00")) &&
+                    report.getLastUpdated() == null
+                )
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldHandleReportWithNullLastUpdatedInSave() {
+        Report reportWithNullDate = Report.builder()
+                .id("NULL_DATE_SAVE")
+                .reportType("NULL_DATE_SAVE")
+                .approvedLoansCount(5L)
+                .totalApprovedAmount(new BigDecimal("25000.00"))
+                .lastUpdated(null)
+                .build();
+        
+        when(dynamoTable.putItem(any(ReportEntity.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        Mono<Report> result = repositoryAdapter.save(reportWithNullDate);
+
+        StepVerifier.create(result)
+                .expectNext(reportWithNullDate)
+                .verifyComplete();
+
+        verify(dynamoTable).putItem(any(ReportEntity.class));
+    }
+
+    @Test
+    void shouldHandleErrorInIncrementCounter() {
+        String reportType = "ERROR_INCREMENT";
+        ReportEntity existingEntity = createReportEntity(reportType, 5L, new BigDecimal("25000.00"));
+        Key expectedKey = Key.builder().partitionValue(reportType).build();
+        RuntimeException saveError = new RuntimeException("Save failed during increment");
+        
+        when(dynamoTable.getItem(expectedKey))
+                .thenReturn(CompletableFuture.completedFuture(existingEntity));
+        when(dynamoTable.putItem(any(ReportEntity.class)))
+                .thenReturn(CompletableFuture.failedFuture(saveError));
+
+        Mono<Report> result = repositoryAdapter.incrementCounter(reportType);
+
+        StepVerifier.create(result)
+                .expectError(RuntimeException.class)
+                .verify();
+
+        verify(dynamoTable).getItem(expectedKey);
+        verify(dynamoTable).putItem(any(ReportEntity.class));
+    }
+
+    @Test
+    void shouldHandleErrorInIncrementCounterAndAmount() {
+        String reportType = "ERROR_INCREMENT_AMOUNT";
+        BigDecimal incrementAmount = new BigDecimal("1000.00");
+        ReportEntity existingEntity = createReportEntity(reportType, 2L, new BigDecimal("5000.00"));
+        Key expectedKey = Key.builder().partitionValue(reportType).build();
+        RuntimeException saveError = new RuntimeException("Save failed during increment and amount");
+        
+        when(dynamoTable.getItem(expectedKey))
+                .thenReturn(CompletableFuture.completedFuture(existingEntity));
+        when(dynamoTable.putItem(any(ReportEntity.class)))
+                .thenReturn(CompletableFuture.failedFuture(saveError));
+
+        Mono<Report> result = repositoryAdapter.incrementCounterAndAmount(reportType, incrementAmount);
+
+        StepVerifier.create(result)
+                .expectError(RuntimeException.class)
+                .verify();
+
+        verify(dynamoTable).getItem(expectedKey);
+        verify(dynamoTable).putItem(any(ReportEntity.class));
+    }
+
+    @Test
+    void shouldHandleErrorInFindByReportTypeForIncrementCounter() {
+        String reportType = "ERROR_FIND_INCREMENT";
+        Key expectedKey = Key.builder().partitionValue(reportType).build();
+        RuntimeException findError = new RuntimeException("Find failed for increment");
+        
+        when(dynamoTable.getItem(expectedKey))
+                .thenReturn(CompletableFuture.failedFuture(findError));
+        when(dynamoTable.putItem(any(ReportEntity.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        Mono<Report> result = repositoryAdapter.incrementCounter(reportType);
+
+        StepVerifier.create(result)
+                .expectNextMatches(report -> 
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(1L) &&
+                    report.getTotalApprovedAmount().equals(BigDecimal.ZERO)
+                )
+                .verifyComplete();
+
+        verify(dynamoTable).getItem(expectedKey);
+        verify(dynamoTable).putItem(any(ReportEntity.class));
+    }
+
+    @Test
+    void shouldHandleErrorInFindByReportTypeForIncrementCounterAndAmount() {
+        String reportType = "ERROR_FIND_INCREMENT_AMOUNT";
+        BigDecimal incrementAmount = new BigDecimal("2500.00");
+        Key expectedKey = Key.builder().partitionValue(reportType).build();
+        RuntimeException findError = new RuntimeException("Find failed for increment and amount");
+        
+        when(dynamoTable.getItem(expectedKey))
+                .thenReturn(CompletableFuture.failedFuture(findError));
+        when(dynamoTable.putItem(any(ReportEntity.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        Mono<Report> result = repositoryAdapter.incrementCounterAndAmount(reportType, incrementAmount);
+
+        StepVerifier.create(result)
+                .expectNextMatches(report -> 
+                    report.getReportType().equals(reportType) &&
+                    report.getApprovedLoansCount().equals(1L) &&
+                    report.getTotalApprovedAmount().equals(incrementAmount)
+                )
+                .verifyComplete();
+
+        verify(dynamoTable).getItem(expectedKey);
+        verify(dynamoTable).putItem(any(ReportEntity.class));
     }
 
     private Report createReport(String reportType, Long count, BigDecimal amount) {

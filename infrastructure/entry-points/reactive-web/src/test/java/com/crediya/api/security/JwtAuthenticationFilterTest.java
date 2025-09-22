@@ -204,4 +204,228 @@ class JwtAuthenticationFilterTest {
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    @Test
+    void deberiaPermitirRutasPublicasConPrefijoReports() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/reports/actuator/health").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirSwaggerUIConPrefijoReports() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/reports/swagger-ui/index.html").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirApiDocsConPrefijoReports() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/reports/v3/api-docs/swagger-config").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirWebjarsConPrefijoReports() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/reports/webjars/swagger-ui/index.css").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirWebjars() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/webjars/swagger-ui/index.css").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirRutasPublicConPrefijoReports() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/reports/public/automatico").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaPermitirRutasPublic() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/public/automatico").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(chain.filter(exchange)).thenReturn(Mono.empty());
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(chain, times(1)).filter(exchange);
+    }
+
+    @Test
+    void deberiaManejarHeaderAuthorizationNull() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test").build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarTokenBearerVacio() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", "Bearer ")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarTokenBearerSoloConEspacios() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", "Bearer    ")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarHeaderSinTexto() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", "   ")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarExcepcionEnExtraerDatosDelToken() {
+        String token = "Bearer valid-jwt-token";
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", token)
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(jwtService.validarToken("valid-jwt-token")).thenReturn(true);
+        when(jwtService.extraerEmail("valid-jwt-token")).thenThrow(new RuntimeException("Error extrayendo email"));
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(jwtService, times(1)).validarToken("valid-jwt-token");
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarExcepcionEnExtraerIdUsuario() {
+        String token = "Bearer valid-jwt-token";
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", token)
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(jwtService.validarToken("valid-jwt-token")).thenReturn(true);
+        when(jwtService.extraerEmail("valid-jwt-token")).thenReturn("test@test.com");
+        when(jwtService.extraerIdUsuario("valid-jwt-token")).thenThrow(new RuntimeException("Error extrayendo ID"));
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(jwtService, times(1)).validarToken("valid-jwt-token");
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarExcepcionEnExtraerNombre() {
+        String token = "Bearer valid-jwt-token";
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", token)
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+        
+        when(jwtService.validarToken("valid-jwt-token")).thenReturn(true);
+        when(jwtService.extraerEmail("valid-jwt-token")).thenReturn("test@test.com");
+        when(jwtService.extraerIdUsuario("valid-jwt-token")).thenReturn("123");
+        when(jwtService.extraerNombre("valid-jwt-token")).thenThrow(new RuntimeException("Error extrayendo nombre"));
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        verify(jwtService, times(1)).validarToken("valid-jwt-token");
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarTokenConFormatoBearerIncorrecto() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", "bear token-here")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void deberiaManejarTokenConBearerEnMinuscula() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/test")
+                .header("Authorization", "bearer valid-token")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        StepVerifier.create(jwtAuthenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
 }

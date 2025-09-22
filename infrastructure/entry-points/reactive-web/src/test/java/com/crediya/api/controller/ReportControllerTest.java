@@ -2,6 +2,7 @@ package com.crediya.api.controller;
 
 import com.crediya.api.dto.ReportResponseDto;
 import com.crediya.api.security.JwtUserPrincipal;
+import com.crediya.api.service.AutomaticReportService;
 import com.crediya.model.report.Report;
 import com.crediya.usecase.getreportcounter.GetReportCounterUseCase;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,9 @@ class ReportControllerTest {
     @Mock
     private GetReportCounterUseCase getReportCounterUseCase;
 
+    @Mock
+    private AutomaticReportService automaticReportService;
+
     private ReportController reportController;
 
     private JwtUserPrincipal adminPrincipal;
@@ -37,7 +41,7 @@ class ReportControllerTest {
 
     @BeforeEach
     void setUp() {
-        reportController = new ReportController(getReportCounterUseCase);
+        reportController = new ReportController(getReportCounterUseCase, automaticReportService);
         
         adminPrincipal = JwtUserPrincipal.builder()
                 .email("admin@crediya.com")
